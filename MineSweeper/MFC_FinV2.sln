@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MFC_FinV2", "MFC_FinV2\MFC_FinV2.vcproj", "{3BCF2BE3-BCA1-44BA-BB96-FA9F8D2BA352}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3BCF2BE3-BCA1-44BA-BB96-FA9F8D2BA352}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3BCF2BE3-BCA1-44BA-BB96-FA9F8D2BA352}.Debug|Win32.Build.0 = Debug|Win32
+		{3BCF2BE3-BCA1-44BA-BB96-FA9F8D2BA352}.Release|Win32.ActiveCfg = Release|Win32
+		{3BCF2BE3-BCA1-44BA-BB96-FA9F8D2BA352}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
