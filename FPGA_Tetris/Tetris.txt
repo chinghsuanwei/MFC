@@ -1,0 +1,222 @@
+// --------------------------------------------------------------------
+//
+//   Title     :  chap07-1.c
+//             :
+//   Library   :
+//             :
+//   Developers:  MICROTIME MDS group
+//             :
+//   Purpose   :  DEMO LCD Program for Creator Board
+//             :
+//   Limitation:
+//             :
+//   Note      :
+//             :
+// --------------------------------------------------------------------
+//   modification history :
+// --------------------------------------------------------------------
+//   Version| mod. date: |
+//   V1.0   | 10/31/2003 | First release
+// --------------------------------------------------------------------
+//
+// Note:
+//
+//       MICROTIME COMPUTER INC.
+//
+//
+
+
+/*************************************************************************
+Include files
+*************************************************************************/
+#include <stdio.h>
+#include "driver.h"
+
+void shift_down(unsigned short line);
+unsigned short cpld_ctrl ;
+void shift_left(unsigned short line, unsigned short vertical);
+const char pattern[4][3] ={"000", "010","010", "011"}; 
+unsigned short io_reg2;		
+unsigned short new_row, new_col; 		
+int square[64][16] = {0};
+				      
+/********************************************************************
+不精準的延遲副程式 : 
+********************************************************************/
+/*void Delay(unsigned short ms)
+{
+	unsigned short i, j;
+	
+	for (i=0; i < ms ; i++)
+	    for (j=0; j < 1000; j++) {}
+}	
+*/
+/*KEYPAD*/
+const UC Select_Scan[] = {
+	0xe,0xd,0xc,0x7
+};
+int Keypad() {
+	int i,j;
+	for(i=0;i<3;i++){
+		io_reg2 = (io_reg2 & 0xff00) + Select_Scan[i];
+		IO_REG2 = io_reg2;
+		Delay(1);						// 防彈跳		
+		for(j=0 ; j<2;j++) {				// Scan Column, 目前只掃瞄 0~2 行
+			if(((IO_REG1 >> 8) & 0x0f) == Select_Scan[j]) {	//  判斷使用者按了那一行
+				 if(i==0 && j==0) return 1;  // 回傳鍵盤上的值 
+				 else if(i==0 && j == 1) return 2;
+				 //else if(i==1 && j == 1) return 3;
+			}
+		}
+	}
+	return -1;						//  沒按任何一鍵
+}
+
+/********************************************************************
+系統初始化
+********************************************************************/
+void Initial_Creator(void)
+{
+        //Initial CPLD_CTRL
+        cpld_ctrl = 0x3C;
+        CPLD_CTRL = cpld_ctrl;
+        Delay(500);
+        cpld_ctrl |= 0x01;    		//Release IO reset
+        CPLD_CTRL = cpld_ctrl;
+
+        Delay(500);
+        Initial_TIMER0();
+        Initial_KEYPAD();
+        Initial_LCD();
+   //     LCD_EnableCursor(FALSE);
+}
+
+//對LCD設定資料
+ void WriteLCD (unsigned short reg_no, unsigned short value)
+{
+	LCD_CMD = 0xff;			//MSB
+	OptimizationDelay();		//for Optimization	
+	LCD_CMD = reg_no;			//LSB
+		
+	LCD_DATA = (value >> 8) ;	//MSB
+	OptimizationDelay();		//for Optimization	
+	LCD_DATA = value;		//LSB
+}
+
+
+void draw_line(unsigned short addr, unsigned short data)
+{
+     WriteLCD(0x11, addr);
+     WriteLCD(0x12, data);
+}
+
+const UC LED_tb2[] = {
+		0xc0, 0xf9, 0xa4, 0xb0, 0x99,
+		0x92, 0x82, 0xf8, 0x80, 0x90,
+		0xa0, 0x83, 0xc6, 0xa1, 0x84,
+		0x8e, 0x7f, 0xff
+};
+
+/********************************************************************
+主程式 
+********************************************************************/
+
+extern unsigned short row;
+extern unsigned short stop;
+
+int main(void)
+{      
+        int num;
+		int i,j,k,dispear = 0,line;
+        unsigned short score = 0;
+		unsigned short  addr;
+        unsigned short  col;
+		int flag = 1;
+		
+              
+	    Initial_Creator();
+	    EnableInterrupt(BIT_GMASK);	
+        IO_REG0 = 0xf700 + LED_tb2[score];
+        //Initial_LCD();
+       while(1)
+       {  
+	      for(col = 8,row = 1; row < 64; ){
+			 if(row%2 == flag){
+			   flag = (flag + 1)%2;
+			   draw_line((row-1)*32+col, 0x0000);
+		       draw_line(row*32+col-16, 0x0000); 
+               draw_line(row*32+col, 0xffff);
+			   draw_line(row*32+col+16, 0xffff);
+			   if(row==63 || square[row+1][col] == 1) break;
+			 }
+		     if((num=Keypad()) != -1 && stop < 6){
+		  	 	if(num==1){
+				   if(col > 0 && square[row][col-1]==0){
+				      draw_line(row*32+col, 0x0000);
+				      draw_line(row*32+col+16, 0x0000);
+				      col--;
+				      draw_line(row*32+col, 0xffff);
+				      draw_line(row*32+col+16, 0xffff);
+				   }
+				}
+				else if(num==2){
+				   if(col < 15 && square[row][col+1]==0){
+				      draw_line(row*32+col, 0x0000);
+				      draw_line(row*32+col+16, 0x0000);
+				      col++;
+				      draw_line(row*32+col, 0xffff);
+				      draw_line(row*32+col+16, 0xffff);
+				   }
+				}
+				Delay(40);
+		  	 }
+			 Delay(20);
+		 }
+		  square[row][col] = 1;
+		  Delay(20);
+
+		  for(i = 0;i < 16; i++){
+		  	 if(square[row][i] == 1){
+			    if(i == 15){
+				   // 消除
+				   for(i = 0;i < 16; i++) {
+				       square[row][i] = 0;
+				       draw_line(row*32+i, 0x0000);
+					   draw_line(row*32+16+i, 0x0000);
+				   }
+				   score++;
+				   IO_REG0 = 0xf700 + LED_tb2[score];
+				   dispear = 1;
+				   stop = 0; // 讓一開始速度不要那麼快
+				}
+			    continue;
+			 }
+			 else
+			    break;
+		  }
+		  
+		  line = row;
+		  
+		  if(dispear == 1){
+		      for(col = 0;col < 16;col++){
+	              for(i = line; i > 0; i--){
+			          if(square[i][col] == 1){
+				         square[i][col] = 0;
+				         for(j = i; j < 64;j++){
+			                draw_line((j-1)*32+col, 0x0000);
+		                    draw_line(j*32+col-16, 0x0000); 
+                            draw_line(j*32+col, 0xffff);
+			                draw_line(j*32+col+16, 0xffff);
+						    if(square[j+1][col]==1 || j == 63) break;
+					     }
+				      square[j][col] = 1;
+				      }
+				      else continue;
+			     }
+		     }
+	      }
+      }	  
+        return(0);
+}
+// 口口    口口口  口口口口   口    口口
+// 口口        口           口口口    口口
